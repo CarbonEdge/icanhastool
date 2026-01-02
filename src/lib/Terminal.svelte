@@ -70,6 +70,9 @@
 
     // Start Claude Code
     await startClaude();
+
+    // Auto-focus terminal so user can interact immediately
+    terminal.focus();
   });
 
   onDestroy(() => {

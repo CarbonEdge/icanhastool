@@ -48,17 +48,34 @@ Download a speech recognition model from [alphacephei.com/vosk/models](https://a
 | `vosk-model-small-en-us-0.15` | 40 MB | Fast | Good for testing |
 | `vosk-model-en-us-0.22` | 1.8 GB | Slower | Production quality |
 
-Extract to the models directory:
+Extract to **one of these locations** (the app scans all of them):
 
 ```bash
+# Option 1: Project models folder (recommended for development)
+# Just create a "models" folder in the project root
+mkdir models
+# Extract your model here, e.g., models/vosk-model-small-en-us-0.15/
+
+# Option 2: App data directory (for production/installed app)
 # Windows
-mkdir "%APPDATA%\com.icanhastool.app\models"
+%APPDATA%\com.icanhastool.app\models\
 
 # macOS
-mkdir -p ~/Library/Application\ Support/com.icanhastool.app/models
+~/Library/Application Support/com.icanhastool.app/models/
 
 # Linux
-mkdir -p ~/.local/share/com.icanhastool.app/models
+~/.local/share/com.icanhastool.app/models/
+```
+
+**Important:** The model folder must contain the actual model files directly. Your structure should look like:
+```
+models/
+└── vosk-model-small-en-us-0.15/
+    ├── am/
+    ├── conf/
+    ├── graph/
+    ├── ivector/
+    └── README
 ```
 
 ### Step 3: Run
@@ -233,8 +250,37 @@ Frontend tests use **Vitest** with `@testing-library/svelte` and mocked Tauri AP
 
 ## Troubleshooting
 
-### "No model loaded" warning
-Download and extract a Vosk model to the models directory (see Quick Start step 3).
+### "No model loaded" or "Load a speech model in settings"
+
+The app scans these directories for Vosk models:
+1. **Project `models/` folder** (for development)
+2. **Parent of project `models/` folder** (when CWD is `src-tauri/`)
+3. **App data directory** (for production)
+
+**Debug steps:**
+
+1. **Verify model structure** - The model folder must contain `am/` and `graph/` subdirectories:
+   ```
+   models/vosk-model-small-en-us-0.15/
+   ├── am/          ← Required
+   ├── conf/
+   ├── graph/       ← Required
+   └── ivector/
+   ```
+
+2. **Check model detection** - Open Settings (gear icon) and look under "Installed Models". If your model doesn't appear:
+   - Ensure the model is extracted (not still zipped)
+   - Ensure it's not nested incorrectly (e.g., `models/vosk-model/vosk-model/am/`)
+   - Try placing it in the project root's `models/` folder
+
+3. **Verify paths** - The app auto-detects models from:
+   - `./models/` (current working directory)
+   - `../models/` (parent directory, for when running from `src-tauri/`)
+   - `%APPDATA%\com.icanhastool.app\models\` (Windows)
+   - `~/Library/Application Support/com.icanhastool.app/models/` (macOS)
+   - `~/.local/share/com.icanhastool.app/models/` (Linux)
+
+4. **Manual load** - If the model appears in Settings but won't load, check the console for Vosk errors.
 
 ### No audio devices found
 - Ensure your microphone is connected and enabled

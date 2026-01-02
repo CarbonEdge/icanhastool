@@ -32,7 +32,15 @@
 
   onMount(async () => {
     await refreshDevices();
-    await refreshModels();
+    const installedList = await refreshModels();
+
+    // Auto-load previously selected model if it exists
+    if (currentSettings.selectedModel && installedList) {
+      const modelExists = installedList.some(m => m.path === currentSettings.selectedModel);
+      if (modelExists) {
+        await loadModel(currentSettings.selectedModel);
+      }
+    }
   });
 
   async function refreshDevices() {
@@ -45,14 +53,16 @@
     }
   }
 
-  async function refreshModels() {
+  async function refreshModels(): Promise<ModelInfo[] | null> {
     try {
       const available = await invoke<ModelInfo[]>('list_models');
       const installedList = await invoke<ModelInfo[]>('list_installed_models');
       availableModels.set(available);
       installedModels.set(installedList);
+      return installedList;
     } catch (e) {
       console.error('Failed to list models:', e);
+      return null;
     }
   }
 
