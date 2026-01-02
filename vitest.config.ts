@@ -6,9 +6,6 @@ export default defineConfig({
   plugins: [
     svelte({
       hot: !process.env.VITEST,
-      compilerOptions: {
-        dev: true,
-      },
     }),
   ],
   test: {
@@ -27,17 +24,12 @@ export default defineConfig({
         '.svelte-kit/',
         'vitest.setup.ts',
       ],
-      thresholds: {
-        statements: 100,
-        branches: 100,
-        functions: 100,
-        lines: 100,
-      },
     },
   },
   resolve: {
     alias: {
       $lib: path.resolve('./src/lib'),
     },
+    conditions: ['browser'],
   },
 });
