@@ -102,8 +102,14 @@ describe('VoiceControl keyboard events', () => {
 
     render(VoiceControl);
 
+    // Wait for store subscriptions to settle
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
     // Simulate keydown
     await fireEvent.keyDown(window, { code: 'Space' });
+
+    // Wait for async invoke call
+    await new Promise((resolve) => setTimeout(resolve, 50));
 
     // Should have called start_recording
     expect(invoke).toHaveBeenCalledWith('start_recording', { deviceName: null });
