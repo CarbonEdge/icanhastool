@@ -1,0 +1,212 @@
+<script lang="ts">
+  import { onMount } from 'svelte';
+  import Terminal from '$lib/Terminal.svelte';
+  import VoiceControl from '$lib/VoiceControl.svelte';
+  import Settings from '$lib/Settings.svelte';
+  import Waveform from '$lib/Waveform.svelte';
+  import { loadSettings, claudeStatus, isClaudeRunning, isModelLoaded } from '$lib/stores/app';
+
+  let terminal: Terminal;
+  let settingsOpen = false;
+  let claudeRunning = false;
+  let modelLoaded = false;
+
+  isClaudeRunning.subscribe((v) => (claudeRunning = v));
+  isModelLoaded.subscribe((v) => (modelLoaded = v));
+
+  onMount(() => {
+    loadSettings();
+  });
+
+  function handleTranscription(event: CustomEvent<string>) {
+    const text = event.detail;
+    if (terminal && text.trim()) {
+      terminal.sendText(text);
+    }
+  }
+
+  function openSettings() {
+    settingsOpen = true;
+  }
+</script>
+
+<div class="app">
+  <header class="app-header">
+    <h1>icanhastool</h1>
+    <div class="header-status">
+      <span class="status-indicator" class:running={claudeRunning}>
+        {claudeRunning ? 'Claude Running' : 'Claude Stopped'}
+      </span>
+      <button class="settings-button" on:click={openSettings} aria-label="Open settings">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+          <path
+            d="M19.14 12.94c.04-.31.06-.63.06-.94 0-.31-.02-.63-.06-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"
+          />
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <main class="app-main">
+    <div class="terminal-section">
+      <Terminal bind:this={terminal} />
+    </div>
+
+    <aside class="voice-section">
+      <VoiceControl on:transcription={handleTranscription} />
+      <Waveform />
+
+      {#if !modelLoaded}
+        <div class="model-warning">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+            <path
+              d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"
+            />
+          </svg>
+          <span>Load a speech model in settings to enable voice input</span>
+        </div>
+      {/if}
+    </aside>
+  </main>
+
+  <Settings bind:isOpen={settingsOpen} />
+</div>
+
+<style>
+  :global(*) {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  :global(body) {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell,
+      sans-serif;
+    background-color: var(--bg-primary, #0f172a);
+    color: var(--text-primary, #f8fafc);
+    overflow: hidden;
+  }
+
+  .app {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+  }
+
+  .app-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 20px;
+    background-color: var(--bg-secondary, #1e293b);
+    border-bottom: 1px solid var(--border-color, #334155);
+  }
+
+  h1 {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-primary, #f8fafc);
+  }
+
+  .header-status {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .status-indicator {
+    font-size: 12px;
+    padding: 4px 12px;
+    border-radius: 9999px;
+    background-color: var(--bg-tertiary, #334155);
+    color: var(--text-muted, #94a3b8);
+  }
+
+  .status-indicator.running {
+    background-color: rgba(34, 197, 94, 0.2);
+    color: #22c55e;
+  }
+
+  .settings-button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 6px;
+    color: var(--text-muted, #94a3b8);
+    transition: all 0.2s;
+  }
+
+  .settings-button:hover {
+    background-color: var(--bg-tertiary, #334155);
+    color: var(--text-primary, #f8fafc);
+  }
+
+  .app-main {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  .terminal-section {
+    flex: 1;
+    padding: 16px;
+    overflow: hidden;
+  }
+
+  .voice-section {
+    width: 280px;
+    padding: 16px;
+    background-color: var(--bg-secondary, #1e293b);
+    border-left: 1px solid var(--border-color, #334155);
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .model-warning {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 12px;
+    background-color: rgba(251, 191, 36, 0.1);
+    border: 1px solid rgba(251, 191, 36, 0.3);
+    border-radius: 8px;
+    font-size: 12px;
+    color: #fbbf24;
+  }
+
+  .model-warning svg {
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  @media (prefers-color-scheme: light) {
+    :global(body) {
+      --bg-primary: #ffffff;
+      --bg-secondary: #f8fafc;
+      --bg-tertiary: #e2e8f0;
+      --text-primary: #0f172a;
+      --text-muted: #64748b;
+      --border-color: #e2e8f0;
+    }
+  }
+
+  :global([data-theme='light']) {
+    --bg-primary: #ffffff;
+    --bg-secondary: #f8fafc;
+    --bg-tertiary: #e2e8f0;
+    --text-primary: #0f172a;
+    --text-muted: #64748b;
+    --border-color: #e2e8f0;
+  }
+
+  :global([data-theme='dark']) {
+    --bg-primary: #0f172a;
+    --bg-secondary: #1e293b;
+    --bg-tertiary: #334155;
+    --text-primary: #f8fafc;
+    --text-muted: #94a3b8;
+    --border-color: #334155;
+  }
+</style>
