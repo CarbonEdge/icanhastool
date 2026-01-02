@@ -5,7 +5,9 @@
       "Bash(npm --version)",
       "Bash(rustc:*)",
       "Bash(cargo --version:*)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(npm run check:*)",
+      "Bash(npm test:*)"
     ]
   }
 }

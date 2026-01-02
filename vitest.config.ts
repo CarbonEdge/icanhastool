@@ -7,6 +7,10 @@ export default defineConfig({
     include: ['src/**/*.{test,spec}.{js,ts}'],
     globals: true,
     environment: 'jsdom',
+    alias: {
+      // Handle svelte internals for testing
+      'svelte/internal': 'svelte/internal/client',
+    },
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
@@ -29,5 +33,6 @@ export default defineConfig({
     alias: {
       $lib: '/src/lib',
     },
+    conditions: ['browser'],
   },
 });

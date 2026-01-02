@@ -25,7 +25,10 @@
   let recording = false;
   let modelLoaded = false;
   let partial = '';
-  let currentSettings = { recordingMode: 'toggle' as const, pushToTalkKey: 'Space' };
+  let currentSettings: { recordingMode: 'toggle' | 'push-to-talk'; pushToTalkKey: string } = {
+    recordingMode: 'toggle',
+    pushToTalkKey: 'Space'
+  };
 
   isRecording.subscribe((v) => (recording = v));
   isModelLoaded.subscribe((v) => (modelLoaded = v));

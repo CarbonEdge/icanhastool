@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/svelte';
 import Settings from '$lib/Settings.svelte';
-import { audioDevices, availableModels, installedModels, settings, isModelLoaded } from '$lib/stores/app';
+import { audioDevices, availableModels, installedModels, settings, isModelLoaded, type AppSettings } from '$lib/stores/app';
 
 // Mock Tauri API
 vi.mock('@tauri-apps/api/core', () => ({
@@ -132,7 +132,7 @@ describe('Settings interactions', () => {
     await fireEvent.change(themeSelect, { target: { value: 'dark' } });
 
     // Theme should be updated in store
-    let currentSettings;
+    let currentSettings: AppSettings | undefined;
     settings.subscribe((s) => (currentSettings = s))();
     expect(currentSettings?.theme).toBe('dark');
   });
