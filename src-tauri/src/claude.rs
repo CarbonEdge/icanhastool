@@ -3,9 +3,9 @@
 //! Spawns Claude Code in a pseudo-terminal and handles bidirectional communication.
 
 use parking_lot::Mutex;
-use portable_pty::{native_pty_system, CommandBuilder, PtySize, PtySystem};
+use portable_pty::{native_pty_system, CommandBuilder, PtySize};
 use serde::{Deserialize, Serialize};
-use std::io::{BufRead, BufReader, Write};
+use std::io::{BufReader, Write};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use thiserror::Error;
@@ -53,24 +53,22 @@ pub trait ClaudeProcess: Send + Sync {
 
 /// Real Claude Code process implementation
 pub struct ClaudeCodeProcess {
-    pty_system: Box<dyn PtySystem + Send + Sync>,
     master: Mutex<Option<Box<dyn portable_pty::MasterPty + Send>>>,
     child: Mutex<Option<Box<dyn portable_pty::Child + Send + Sync>>>,
     writer: Mutex<Option<Box<dyn Write + Send>>>,
     status: Mutex<ProcessStatus>,
-    running: AtomicBool,
+    running: Arc<AtomicBool>,
     output_callback: Mutex<Option<Arc<dyn Fn(OutputEvent) + Send + Sync>>>,
 }
 
 impl ClaudeCodeProcess {
     pub fn new() -> Self {
         Self {
-            pty_system: native_pty_system(),
             master: Mutex::new(None),
             child: Mutex::new(None),
             writer: Mutex::new(None),
             status: Mutex::new(ProcessStatus::Stopped),
-            running: AtomicBool::new(false),
+            running: Arc::new(AtomicBool::new(false)),
             output_callback: Mutex::new(None),
         }
     }
@@ -118,8 +116,8 @@ impl ClaudeProcess for ClaudeCodeProcess {
 
         let claude_cmd = Self::find_claude_command()?;
 
-        let pair = self
-            .pty_system
+        let pty_system = native_pty_system();
+        let pair = pty_system
             .openpty(PtySize {
                 rows: 24,
                 cols: 80,
@@ -251,7 +249,7 @@ impl ClaudeProcess for ClaudeCodeProcess {
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
     use std::sync::atomic::AtomicUsize;
 

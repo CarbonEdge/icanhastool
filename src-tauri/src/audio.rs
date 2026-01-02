@@ -6,7 +6,10 @@
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use cpal::{Device, Host, SampleFormat, StreamConfig};
 use parking_lot::Mutex;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::mpsc::{self, Sender};
 use std::sync::Arc;
+use std::thread::{self, JoinHandle};
 use thiserror::Error;
 
 /// Audio capture errors
@@ -43,48 +46,151 @@ pub trait AudioCapture: Send + Sync {
     fn is_recording(&self) -> bool;
 }
 
-/// Real audio capture implementation using cpal
+/// Command sent to the audio capture thread
+enum AudioCommand {
+    Start {
+        device_name: Option<String>,
+        callback: Arc<dyn Fn(Vec<i16>) + Send + Sync>,
+    },
+    Stop,
+}
+
+/// Real audio capture implementation using cpal.
+/// Uses a dedicated thread to manage the stream since cpal::Stream is not Send+Sync.
 pub struct CpalAudioCapture {
-    host: Host,
-    stream: Mutex<Option<cpal::Stream>>,
-    is_recording: Mutex<bool>,
+    command_sender: Mutex<Option<Sender<AudioCommand>>>,
+    is_recording: Arc<AtomicBool>,
+    thread_handle: Mutex<Option<JoinHandle<()>>>,
 }
 
 impl CpalAudioCapture {
     pub fn new() -> Self {
         Self {
-            host: cpal::default_host(),
-            stream: Mutex::new(None),
-            is_recording: Mutex::new(false),
+            command_sender: Mutex::new(None),
+            is_recording: Arc::new(AtomicBool::new(false)),
+            thread_handle: Mutex::new(None),
         }
     }
 
-    fn get_device(&self, device_name: Option<&str>) -> Result<Device, AudioError> {
+    fn get_device(host: &Host, device_name: Option<&str>) -> Result<Device, AudioError> {
         match device_name {
-            Some(name) => self
-                .host
+            Some(name) => host
                 .input_devices()
                 .map_err(|e| AudioError::ConfigError(e.to_string()))?
                 .find(|d| d.name().map(|n| n == name).unwrap_or(false))
                 .ok_or_else(|| AudioError::DeviceNotFound(name.to_string())),
-            None => self
-                .host
+            None => host
                 .default_input_device()
                 .ok_or(AudioError::NoInputDevice),
         }
     }
 
-    fn create_config(device: &Device) -> Result<StreamConfig, AudioError> {
-        let supported_config = device
-            .default_input_config()
-            .map_err(|e| AudioError::ConfigError(e.to_string()))?;
-
+    fn create_config(_device: &Device) -> Result<StreamConfig, AudioError> {
         // Vosk requires 16kHz mono
         Ok(StreamConfig {
             channels: 1,
             sample_rate: cpal::SampleRate(16000),
             buffer_size: cpal::BufferSize::Default,
         })
+    }
+
+    fn start_audio_thread(&self) -> Sender<AudioCommand> {
+        let (tx, rx) = mpsc::channel::<AudioCommand>();
+        let is_recording = self.is_recording.clone();
+
+        let handle = thread::spawn(move || {
+            let host = cpal::default_host();
+            let mut _current_stream: Option<cpal::Stream> = None;
+
+            while let Ok(cmd) = rx.recv() {
+                match cmd {
+                    AudioCommand::Start { device_name, callback } => {
+                        // Stop any existing stream
+                        _current_stream = None;
+
+                        let device = match Self::get_device(&host, device_name.as_deref()) {
+                            Ok(d) => d,
+                            Err(e) => {
+                                eprintln!("Failed to get audio device: {}", e);
+                                continue;
+                            }
+                        };
+
+                        let config = match Self::create_config(&device) {
+                            Ok(c) => c,
+                            Err(e) => {
+                                eprintln!("Failed to create config: {}", e);
+                                continue;
+                            }
+                        };
+
+                        let sample_format = match device.default_input_config() {
+                            Ok(c) => c.sample_format(),
+                            Err(e) => {
+                                eprintln!("Failed to get input config: {}", e);
+                                continue;
+                            }
+                        };
+
+                        let err_fn = |err| eprintln!("Audio stream error: {}", err);
+
+                        let stream = match sample_format {
+                            SampleFormat::I16 => {
+                                let cb = callback.clone();
+                                device.build_input_stream(
+                                    &config,
+                                    move |data: &[i16], _| {
+                                        cb(data.to_vec());
+                                    },
+                                    err_fn,
+                                    None,
+                                )
+                            }
+                            SampleFormat::F32 => {
+                                let cb = callback.clone();
+                                device.build_input_stream(
+                                    &config,
+                                    move |data: &[f32], _| {
+                                        let samples: Vec<i16> = data
+                                            .iter()
+                                            .map(|&s| (s * i16::MAX as f32) as i16)
+                                            .collect();
+                                        cb(samples);
+                                    },
+                                    err_fn,
+                                    None,
+                                )
+                            }
+                            _ => {
+                                eprintln!("Unsupported sample format: {:?}", sample_format);
+                                continue;
+                            }
+                        };
+
+                        match stream {
+                            Ok(s) => {
+                                if let Err(e) = s.play() {
+                                    eprintln!("Failed to start stream: {}", e);
+                                    continue;
+                                }
+                                _current_stream = Some(s);
+                                is_recording.store(true, Ordering::SeqCst);
+                            }
+                            Err(e) => {
+                                eprintln!("Failed to build stream: {}", e);
+                            }
+                        }
+                    }
+                    AudioCommand::Stop => {
+                        _current_stream = None;
+                        is_recording.store(false, Ordering::SeqCst);
+                    }
+                }
+            }
+        });
+
+        *self.thread_handle.lock() = Some(handle);
+        tx
     }
 }
 
@@ -96,13 +202,12 @@ impl Default for CpalAudioCapture {
 
 impl AudioCapture for CpalAudioCapture {
     fn list_devices(&self) -> Result<Vec<AudioDeviceInfo>, AudioError> {
-        let default_name = self
-            .host
+        let host = cpal::default_host();
+        let default_name = host
             .default_input_device()
             .and_then(|d| d.name().ok());
 
-        let devices = self
-            .host
+        let devices = host
             .input_devices()
             .map_err(|e| AudioError::ConfigError(e.to_string()))?
             .filter_map(|device| {
@@ -121,77 +226,44 @@ impl AudioCapture for CpalAudioCapture {
         device_name: Option<&str>,
         callback: Arc<dyn Fn(Vec<i16>) + Send + Sync>,
     ) -> Result<(), AudioError> {
-        if *self.is_recording.lock() {
+        if self.is_recording.load(Ordering::SeqCst) {
             return Ok(());
         }
 
-        let device = self.get_device(device_name)?;
-        let config = Self::create_config(&device)?;
-        let sample_format = device
-            .default_input_config()
-            .map_err(|e| AudioError::ConfigError(e.to_string()))?
-            .sample_format();
-
-        let err_fn = |err| eprintln!("Audio stream error: {}", err);
-
-        let stream = match sample_format {
-            SampleFormat::I16 => device
-                .build_input_stream(
-                    &config,
-                    move |data: &[i16], _| {
-                        callback(data.to_vec());
-                    },
-                    err_fn,
-                    None,
-                )
-                .map_err(|e| AudioError::StreamError(e.to_string()))?,
-            SampleFormat::F32 => {
-                let callback = callback.clone();
-                device
-                    .build_input_stream(
-                        &config,
-                        move |data: &[f32], _| {
-                            let samples: Vec<i16> = data
-                                .iter()
-                                .map(|&s| (s * i16::MAX as f32) as i16)
-                                .collect();
-                            callback(samples);
-                        },
-                        err_fn,
-                        None,
-                    )
-                    .map_err(|e| AudioError::StreamError(e.to_string()))?
-            }
-            _ => {
-                return Err(AudioError::ConfigError(format!(
-                    "Unsupported sample format: {:?}",
-                    sample_format
-                )))
+        // Ensure thread is running and get/create sender
+        let mut sender_guard = self.command_sender.lock();
+        let sender = match sender_guard.as_ref() {
+            Some(s) => s.clone(),
+            None => {
+                let s = self.start_audio_thread();
+                *sender_guard = Some(s.clone());
+                s
             }
         };
 
-        stream
-            .play()
-            .map_err(|e| AudioError::PlayError(e.to_string()))?;
-
-        *self.stream.lock() = Some(stream);
-        *self.is_recording.lock() = true;
+        sender
+            .send(AudioCommand::Start {
+                device_name: device_name.map(|s| s.to_string()),
+                callback,
+            })
+            .map_err(|e| AudioError::StreamError(e.to_string()))?;
 
         Ok(())
     }
 
     fn stop_recording(&self) {
-        *self.stream.lock() = None;
-        *self.is_recording.lock() = false;
+        if let Some(sender) = self.command_sender.lock().as_ref() {
+            let _ = sender.send(AudioCommand::Stop);
+        }
     }
 
     fn is_recording(&self) -> bool {
-        *self.is_recording.lock()
+        self.is_recording.load(Ordering::SeqCst)
     }
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
     use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 

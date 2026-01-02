@@ -3,12 +3,12 @@
 //! Exposes Rust functionality to the Svelte frontend via Tauri commands.
 
 use crate::audio::{AudioCapture, AudioDeviceInfo, CpalAudioCapture};
-use crate::claude::{ClaudeCodeProcess, ClaudeProcess, OutputEvent, ProcessStatus};
+use crate::claude::{ClaudeCodeProcess, ClaudeProcess, ProcessStatus};
 use crate::vosk_stt::{ModelInfo, ModelManager, RecognitionResult, SpeechRecognizer, VoskRecognizer};
 use parking_lot::Mutex;
 use std::path::PathBuf;
 use std::sync::Arc;
-use tauri::{AppHandle, Emitter, Manager, State};
+use tauri::{AppHandle, Emitter, State};
 
 /// Application state shared across commands
 pub struct AppState {

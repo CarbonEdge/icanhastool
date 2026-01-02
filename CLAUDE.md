@@ -4,7 +4,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-icanhastool is a cross-platform desktop application that provides voice input to Claude Code using local speech recognition (Vosk). Built with Tauri v2 (Rust backend) and Svelte/TypeScript frontend.
+icanhastool is a cross-platform desktop application that provides voice input to Claude Code using local speech recognition (Vosk). Built with Tauri v2 (Rust backend) and Svelte 5/TypeScript frontend.
+
+## Development Agents
+
+See `.claude/agents.md` for specialized agents to help with:
+- **test-runner** - Run all tests (frontend + Rust)
+- **build-check** - Verify builds and type checking
+- **code-reviewer** - Review code for quality
+- **rust-backend** - Work on Rust code in src-tauri/
+- **svelte-frontend** - Work on Svelte code in src/
+- **e2e-tester** - Run Playwright E2E tests
+- **feature-planner** - Plan new features
 
 ## Build Commands
 
@@ -68,3 +79,28 @@ Frontend tests use vitest + @testing-library/svelte with mocked Tauri APIs.
 Vosk models should be placed in the app data directory:
 - Windows: `%APPDATA%\com.icanhastool.app\models\`
 - macOS: `~/Library/Application Support/com.icanhastool.app/models/`
+- Linux: `~/.local/share/com.icanhastool.app/models/`
+
+## Common Workflows
+
+### Adding a New Feature
+1. Use the **feature-planner** agent to design the approach
+2. Implement Rust backend changes (if needed) using **rust-backend** patterns
+3. Implement Svelte frontend changes using **svelte-frontend** patterns
+4. Run **test-runner** to verify all tests pass
+5. Run **build-check** to verify the build
+
+### Fixing a Bug
+1. Reproduce the issue and identify the affected layer (Rust/Svelte)
+2. Write a failing test first
+3. Fix the bug following existing patterns
+4. Run **test-runner** to verify the fix
+5. Use **code-reviewer** to check the changes
+
+### Code Review Checklist
+- [ ] Tests added/updated for changes
+- [ ] Type checking passes (`npm run check`)
+- [ ] Frontend coverage at 100% (`npm run test:coverage`)
+- [ ] Rust tests pass (`cargo test --manifest-path src-tauri/Cargo.toml`)
+- [ ] No security vulnerabilities introduced
+- [ ] Cross-platform considerations addressed

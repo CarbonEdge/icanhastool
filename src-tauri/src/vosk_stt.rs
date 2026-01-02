@@ -6,7 +6,6 @@
 use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
 use thiserror::Error;
 
 /// Speech recognition errors
@@ -143,7 +142,7 @@ impl SpeechRecognizer for VoskRecognizer {
         match state {
             vosk::DecodingState::Running => {
                 let partial = recognizer.partial_result();
-                let result = Self::parse_result(partial.as_str());
+                let result = Self::parse_result(partial.partial);
                 if result.text.is_empty() {
                     Ok(None)
                 } else {
@@ -237,7 +236,7 @@ impl ModelManager {
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
     use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 
