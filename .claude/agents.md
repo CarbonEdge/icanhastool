@@ -54,6 +54,7 @@ General:
 - Check for security issues (command injection, XSS)
 - Verify tests are included for new functionality
 - Check that mocks are updated if interfaces change
+- Make sure to leave a well documented and commented code base with good naming conventions
 ```
 
 ### rust-backend
@@ -75,6 +76,7 @@ Patterns to follow:
 - Handle errors with Result<T, E> and proper error types
 - Use async/await for non-blocking operations
 - Emit events to frontend via Tauri event system
+- Make sure to leave a well documented and commented code base with good naming conventions
 
 After changes, run: cargo test --manifest-path src-tauri/Cargo.toml
 ```
@@ -98,6 +100,7 @@ Patterns to follow:
 - Mock Tauri APIs in tests using vi.mock('@tauri-apps/api')
 - Use @testing-library/svelte for component tests
 - Handle Tauri events with listen/emit from @tauri-apps/api/event
+- Make sure to leave a well documented and commented code base with good naming conventions
 
 After changes, run: npm test && npm run check
 ```

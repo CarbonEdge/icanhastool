@@ -131,7 +131,12 @@
 
   <main class="app-main">
     <div class="terminal-section">
-      {#key currentSettings?.currentWorkspace}
+      <!--
+        Key on workspace to restart Terminal when workspace changes.
+        Use ?? null to normalize undefined to null, preventing spurious
+        Terminal recreation when settings load (undefined → null transition).
+      -->
+      {#key currentSettings?.currentWorkspace ?? null}
         <Terminal
           bind:this={terminal}
           workingDir={currentSettings?.currentWorkspace ?? undefined}
