@@ -161,11 +161,11 @@ pub fn stop_claude(state: State<AppState>) -> Result<(), String> {
 
 #[tauri::command]
 pub fn send_to_claude(state: State<AppState>, input: String) -> Result<(), String> {
-    // Append newline to send the input
-    let input_with_newline = format!("{}\n", input);
+    // Send input directly - xterm.js already sends appropriate characters
+    // (Enter sends \r, arrow keys send escape sequences like \x1b[A, etc.)
     state
         .claude
-        .send_input(&input_with_newline)
+        .send_input(&input)
         .map_err(|e| e.to_string())
 }
 
