@@ -138,6 +138,8 @@ Consider:
 - Trait abstractions for testability
 - Event-based communication between Rust and Svelte
 - Cross-platform compatibility (Windows, macOS, Linux)
+- Features should also be very usable and accessabile to anyone including children.
+- Features should be fun and the end user should enjoy them
 ```
 
 ## Usage
