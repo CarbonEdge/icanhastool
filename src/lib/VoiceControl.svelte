@@ -20,6 +20,7 @@
   let unlisten: UnlistenFn | null = null;
   let unlistenFinal: UnlistenFn | null = null;
   let isPushToTalkActive = false;
+  let pendingTranscription = '';  // Holds transcription for preview before sending
 
   // Subscribe to stores
   let recording = false;
@@ -43,8 +44,10 @@
 
     unlistenFinal = await listen<RecognitionResult>('transcription-final', (event) => {
       updateTranscription(event.payload);
+      // Don't send immediately - store for preview
       if (event.payload.text.trim()) {
-        dispatch('transcription', event.payload.text);
+        pendingTranscription = event.payload.text;
+        console.log('[VoiceControl] Transcription ready for preview:', pendingTranscription);
       }
     });
 
@@ -112,6 +115,27 @@
     }
   }
 
+  async function handleReset() {
+    console.log('[VoiceControl] Reset button clicked');
+    pendingTranscription = '';
+    clearTranscription();
+    try {
+      await invoke('reset_recognizer');
+      console.log('[VoiceControl] Recognizer reset successfully');
+    } catch (e) {
+      console.error('[VoiceControl] Failed to reset recognizer:', e);
+    }
+  }
+
+  function handleSend() {
+    if (pendingTranscription.trim()) {
+      console.log('[VoiceControl] Sending transcription:', pendingTranscription);
+      dispatch('transcription', pendingTranscription);
+      pendingTranscription = '';
+      clearTranscription();
+    }
+  }
+
   // Expose methods for external control
   export { startRecording, stopRecording };
 </script>
@@ -147,6 +171,24 @@
       <div class="recording-indicator">
         <span class="pulse"></span>
         Recording...
+      </div>
+    {:else if pendingTranscription}
+      <div class="pending-transcription">
+        <div class="pending-text">{pendingTranscription}</div>
+        <div class="action-buttons">
+          <button class="send-button" on:click={handleSend} title="Send to Claude">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+              <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+            </svg>
+            Send
+          </button>
+          <button class="reset-button" on:click={handleReset} title="Discard and try again">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+              <path d="M17.65 6.35A7.958 7.958 0 0012 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0112 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
+            </svg>
+            Reset
+          </button>
+        </div>
       </div>
     {/if}
 
@@ -199,6 +241,71 @@
     background-color: #6b7280;
     cursor: not-allowed;
     box-shadow: none;
+  }
+
+  .reset-button {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border: none;
+    border-radius: 6px;
+    background-color: #374151;
+    color: #d1d5db;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .reset-button:hover:not(:disabled) {
+    background-color: #4b5563;
+    color: #f3f4f6;
+  }
+
+  .reset-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .pending-transcription {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background-color: #1f2937;
+    border-radius: 8px;
+    max-width: 400px;
+  }
+
+  .pending-text {
+    color: #f3f4f6;
+    font-size: 14px;
+    text-align: center;
+    word-wrap: break-word;
+  }
+
+  .action-buttons {
+    display: flex;
+    gap: 8px;
+  }
+
+  .send-button {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border: none;
+    border-radius: 6px;
+    background-color: #10b981;
+    color: white;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .send-button:hover {
+    background-color: #059669;
   }
 
   @keyframes pulse-glow {

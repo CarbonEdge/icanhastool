@@ -27,33 +27,33 @@ describe('VoiceControl Component', () => {
 
   it('should render record button', () => {
     render(VoiceControl);
-    const button = screen.getByRole('button');
+    const button = screen.getByTitle('Load a speech model first');
     expect(button).toBeDefined();
   });
 
   it('should disable button when model not loaded', () => {
     render(VoiceControl);
-    const button = screen.getByRole('button');
+    const button = screen.getByTitle('Load a speech model first');
     expect(button.hasAttribute('disabled')).toBe(true);
   });
 
   it('should enable button when model is loaded', async () => {
     isModelLoaded.set(true);
     render(VoiceControl);
-    const button = screen.getByRole('button');
+    const button = screen.getByTitle('Click to start recording');
     expect(button.hasAttribute('disabled')).toBe(false);
   });
 
   it('should show correct title when model not loaded', () => {
     render(VoiceControl);
-    const button = screen.getByRole('button');
+    const button = screen.getByTitle('Load a speech model first');
     expect(button.getAttribute('title')).toBe('Load a speech model first');
   });
 
   it('should show correct title when ready to record', () => {
     isModelLoaded.set(true);
     render(VoiceControl);
-    const button = screen.getByRole('button');
+    const button = screen.getByTitle('Click to start recording');
     expect(button.getAttribute('title')).toBe('Click to start recording');
   });
 
@@ -78,8 +78,24 @@ describe('VoiceControl Component', () => {
     isRecording.set(true);
     isModelLoaded.set(true);
     render(VoiceControl);
-    const button = screen.getByRole('button');
+    const button = screen.getByTitle('Click to stop recording');
     expect(button.classList.contains('recording')).toBe(true);
+  });
+
+  it('should not show action buttons when no pending transcription', () => {
+    render(VoiceControl);
+    // Reset and Send buttons only appear when there's a pending transcription
+    expect(screen.queryByTitle('Reset and try again')).toBeNull();
+    expect(screen.queryByTitle('Send to Claude')).toBeNull();
+  });
+
+  it('should not show action buttons while recording', () => {
+    isRecording.set(true);
+    isModelLoaded.set(true);
+    render(VoiceControl);
+    // Action buttons should not appear during recording
+    expect(screen.queryByTitle('Discard and try again')).toBeNull();
+    expect(screen.queryByTitle('Send to Claude')).toBeNull();
   });
 });
 

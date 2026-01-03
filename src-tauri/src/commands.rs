@@ -132,6 +132,13 @@ pub fn is_model_loaded(state: State<AppState>) -> bool {
     state.recognizer.is_model_loaded()
 }
 
+#[tauri::command]
+pub fn reset_recognizer(state: State<AppState>) {
+    eprintln!("[DEBUG] reset_recognizer called");
+    state.recognizer.reset();
+    eprintln!("[DEBUG] reset_recognizer completed");
+}
+
 // ============================================================================
 // Claude Code Commands
 // ============================================================================

@@ -46,6 +46,7 @@ pub fn run() {
             commands::list_installed_models,
             commands::load_model,
             commands::is_model_loaded,
+            commands::reset_recognizer,
             commands::start_claude,
             commands::stop_claude,
             commands::send_to_claude,
