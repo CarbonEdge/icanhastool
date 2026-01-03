@@ -140,6 +140,15 @@ Consider:
 - Cross-platform compatibility (Windows, macOS, Linux)
 - Features should also be very usable and accessabile to anyone including children.
 - Features should be fun and the end user should enjoy them
+
+A core design principle for building application features is User-Centricity, meaning putting the user's needs first, supported by Consistency, Clarity, and Visual Hierarchy to create intuitive, efficient, and accessible experiences that minimize cognitive load and guide users to their goals. 
+Here's how these principles work together:
+User-Centricity (The 'Why'): Everything should solve a real user problem, derived from research. Features must be built around user goals, not just technical capabilities, ensuring relevance and value.
+Consistency & Familiarity (The 'How it Feels'): Use familiar patterns, layouts, and terminology so users don't have to re-learn the interface, reducing confusion and improving flow.
+Visual Hierarchy (The 'What's Important'): Arrange elements by importance (size, color, placement) to guide the user's eye to the most critical information and actions first, making navigation easy.
+Clarity & Simplicity (The 'Easy to Understand'): Keep interfaces clean, minimize clutter, and make the next step obvious, removing unnecessary steps and cognitive load.
+User Control & Feedback (The 'Confidence'): Give users power (undo, customize) and provide instant, clear feedback on their actions, building trust and confidence.
+Accessibility (The 'Usable by Everyone'): Design for all users, including those with disabilities, ensuring everyone can use the features effectively. 
 ```
 
 ## Usage

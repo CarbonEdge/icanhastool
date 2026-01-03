@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/svelte';
 import VoiceControl from '$lib/VoiceControl.svelte';
-import { isRecording, isModelLoaded, settings } from '$lib/stores/app';
+import { isRecording, isModelLoaded, settings, claudeStatus } from '$lib/stores/app';
 
 // Mock Tauri API
 vi.mock('@tauri-apps/api/core', () => ({
@@ -16,6 +16,7 @@ describe('VoiceControl Component', () => {
   beforeEach(() => {
     isRecording.set(false);
     isModelLoaded.set(false);
+    claudeStatus.set('Stopped');
     settings.set({
       selectedDevice: null,
       selectedModel: null,
@@ -100,12 +101,49 @@ describe('VoiceControl Component', () => {
     expect(screen.queryByTitle('Discard and try again')).toBeNull();
     expect(screen.queryByTitle('Send to Claude')).toBeNull();
   });
+
+  it('should render fire button', () => {
+    render(VoiceControl);
+    const button = screen.getByTitle('Send Enter to submit the prompt');
+    expect(button).toBeDefined();
+  });
+
+  it('should disable fire button when Claude is not running', () => {
+    claudeStatus.set('Stopped');
+    render(VoiceControl);
+    const button = screen.getByTitle('Send Enter to submit the prompt');
+    expect(button.hasAttribute('disabled')).toBe(true);
+  });
+
+  it('should enable fire button when Claude is running', () => {
+    claudeStatus.set('Running');
+    render(VoiceControl);
+    const button = screen.getByTitle('Send Enter to submit the prompt');
+    expect(button.hasAttribute('disabled')).toBe(false);
+  });
+
+  it('should call send_to_claude with Enter when fire button clicked', async () => {
+    const { invoke } = await import('@tauri-apps/api/core');
+    vi.mocked(invoke).mockResolvedValue(undefined);
+
+    claudeStatus.set('Running');
+    render(VoiceControl);
+    const button = screen.getByTitle('Send Enter to submit the prompt');
+
+    await fireEvent.click(button);
+
+    // Wait for async invoke call
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    expect(invoke).toHaveBeenCalledWith('send_to_claude', { input: '\r' });
+  });
 });
 
 describe('VoiceControl keyboard events', () => {
   beforeEach(() => {
     isRecording.set(false);
     isModelLoaded.set(true);
+    claudeStatus.set('Stopped');
     settings.set({
       selectedDevice: null,
       selectedModel: null,

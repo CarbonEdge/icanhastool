@@ -5,6 +5,7 @@
   import {
     isRecording,
     isModelLoaded,
+    isClaudeRunning,
     partialTranscription,
     currentTranscription,
     updateTranscription,
@@ -21,10 +22,12 @@
   let unlistenFinal: UnlistenFn | null = null;
   let isPushToTalkActive = false;
   let pendingTranscription = '';  // Holds transcription for preview before sending
+  let isFiring = false;  // Debounce guard for fire button
 
   // Subscribe to stores
   let recording = false;
   let modelLoaded = false;
+  let claudeRunning = false;
   let partial = '';
   let currentSettings: { recordingMode: 'toggle' | 'push-to-talk'; pushToTalkKey: string } = {
     recordingMode: 'toggle',
@@ -33,6 +36,7 @@
 
   isRecording.subscribe((v) => (recording = v));
   isModelLoaded.subscribe((v) => (modelLoaded = v));
+  isClaudeRunning.subscribe((v) => (claudeRunning = v));
   partialTranscription.subscribe((v) => (partial = v));
   settings.subscribe((v) => (currentSettings = v));
 
@@ -136,35 +140,64 @@
     }
   }
 
+  async function handleFire() {
+    if (isFiring || !claudeRunning) return;
+    isFiring = true;
+    console.log('[VoiceControl] Fire button clicked - sending Enter to Claude');
+    try {
+      await invoke('send_to_claude', { input: '\r' });
+    } catch (e) {
+      console.error('[VoiceControl] Failed to send Enter to Claude:', e);
+    } finally {
+      isFiring = false;
+    }
+  }
+
   // Expose methods for external control
   export { startRecording, stopRecording };
 </script>
 
 <div class="voice-control">
-  <button
-    class="record-button"
-    class:recording
-    class:disabled={!modelLoaded}
-    on:click={toggleRecording}
-    disabled={!modelLoaded}
-    title={modelLoaded
-      ? recording
-        ? 'Click to stop recording'
-        : 'Click to start recording'
-      : 'Load a speech model first'}
-  >
-    <svg viewBox="0 0 24 24" width="32" height="32" fill="currentColor">
-      {#if recording}
-        <!-- Stop icon -->
-        <rect x="6" y="6" width="12" height="12" rx="2" />
-      {:else}
-        <!-- Microphone icon -->
-        <path
-          d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm-1 1.93c-3.94-.49-7-3.85-7-7.93h2c0 3.31 2.69 6 6 6s6-2.69 6-6h2c0 4.08-3.06 7.44-7 7.93V19h3v2H9v-2h3v-3.07z"
-        />
-      {/if}
-    </svg>
-  </button>
+  <div class="button-group">
+    <button
+      class="record-button"
+      class:recording
+      class:disabled={!modelLoaded}
+      on:click={toggleRecording}
+      disabled={!modelLoaded}
+      title={modelLoaded
+        ? recording
+          ? 'Click to stop recording'
+          : 'Click to start recording'
+        : 'Load a speech model first'}
+    >
+      <svg viewBox="0 0 24 24" width="32" height="32" fill="currentColor">
+        {#if recording}
+          <!-- Stop icon -->
+          <rect x="6" y="6" width="12" height="12" rx="2" />
+        {:else}
+          <!-- Microphone icon -->
+          <path
+            d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm-1 1.93c-3.94-.49-7-3.85-7-7.93h2c0 3.31 2.69 6 6 6s6-2.69 6-6h2c0 4.08-3.06 7.44-7 7.93V19h3v2H9v-2h3v-3.07z"
+          />
+        {/if}
+      </svg>
+    </button>
+
+    <button
+      class="fire-button"
+      class:disabled={!claudeRunning}
+      on:click={handleFire}
+      disabled={!claudeRunning}
+      aria-label="Submit prompt to Claude"
+      title="Send Enter to submit the prompt"
+    >
+      <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
+        <!-- Fire icon -->
+        <path d="M12 23c-3.9 0-7-3.1-7-7 0-2.8 1.6-5.6 4.1-7.8.5-.4 1.2-.4 1.6.1.4.5.3 1.1-.1 1.5C8.5 11.5 7 13.8 7 16c0 2.8 2.2 5 5 5s5-2.2 5-5c0-1.4-.6-2.9-1.5-4.3-.3-.5-.2-1.1.3-1.5.5-.3 1.1-.2 1.5.3 1.3 1.8 2.2 3.9 2.2 5.5 0 3.9-3.1 7-7.5 7zM12 12c-1.7 0-3-1.3-3-3 0-1.2.8-2.5 2-3.5V2c0-.6.4-1 1-1s1 .4 1 1v3.5c1.2 1 2 2.3 2 3.5 0 1.7-1.3 3-3 3z"/>
+      </svg>
+    </button>
+  </div>
 
   <div class="transcription-display">
     {#if recording}
@@ -211,6 +244,13 @@
     padding: 16px;
   }
 
+  .button-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+
   .record-button {
     width: 64px;
     height: 64px;
@@ -238,6 +278,33 @@
   }
 
   .record-button.disabled {
+    background-color: #6b7280;
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+
+  .fire-button {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    border: none;
+    background-color: #f97316;
+    color: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 12px rgba(249, 115, 22, 0.4);
+  }
+
+  .fire-button:hover:not(.disabled) {
+    transform: scale(1.05);
+    box-shadow: 0 6px 16px rgba(249, 115, 22, 0.5);
+    background-color: #ea580c;
+  }
+
+  .fire-button.disabled {
     background-color: #6b7280;
     cursor: not-allowed;
     box-shadow: none;
