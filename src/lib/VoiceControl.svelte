@@ -94,12 +94,10 @@
     if (!recording) return;
 
     try {
-      const result = await invoke<RecognitionResult>('stop_recording');
+      // The transcription-final event listener handles dispatching the text
+      // so we don't dispatch here to avoid duplication
+      await invoke<RecognitionResult>('stop_recording');
       isRecording.set(false);
-
-      if (result.text.trim()) {
-        dispatch('transcription', result.text);
-      }
     } catch (e) {
       console.error('Failed to stop recording:', e);
       isRecording.set(false);
