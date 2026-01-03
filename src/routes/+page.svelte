@@ -405,4 +405,54 @@
     --text-muted: #94a3b8;
     --border-color: #334155;
   }
+
+  /* High Contrast Dark - Maximum contrast for accessibility */
+  :global([data-theme='high-contrast-dark']) {
+    --bg-primary: #000000;
+    --bg-secondary: #0a0a0a;
+    --bg-tertiary: #1a1a1a;
+    --bg-hover: #2a2a2a;
+    --text-primary: #ffffff;
+    --text-muted: #e0e0e0;
+    --border-color: #ffffff;
+    --focus-ring: #00ffff;
+    --accent-color: #00ff00;
+    --error-color: #ff6b6b;
+    --success-color: #00ff00;
+    --warning-color: #ffff00;
+  }
+
+  /* High Contrast Light - Maximum contrast for accessibility */
+  :global([data-theme='high-contrast-light']) {
+    --bg-primary: #ffffff;
+    --bg-secondary: #f5f5f5;
+    --bg-tertiary: #e0e0e0;
+    --bg-hover: #d0d0d0;
+    --text-primary: #000000;
+    --text-muted: #1a1a1a;
+    --border-color: #000000;
+    --focus-ring: #0000ff;
+    --accent-color: #0000cc;
+    --error-color: #cc0000;
+    --success-color: #006600;
+    --warning-color: #996600;
+  }
+
+  /* Enhanced focus visibility for high contrast modes */
+  :global([data-theme='high-contrast-dark']) :focus,
+  :global([data-theme='high-contrast-light']) :focus {
+    outline: 3px solid var(--focus-ring) !important;
+    outline-offset: 2px !important;
+  }
+
+  :global([data-theme='high-contrast-dark']) button,
+  :global([data-theme='high-contrast-light']) button {
+    border: 2px solid var(--border-color) !important;
+  }
+
+  :global([data-theme='high-contrast-dark']) .status-indicator.running,
+  :global([data-theme='high-contrast-light']) .status-indicator.running {
+    background-color: var(--success-color);
+    color: var(--bg-primary);
+  }
 </style>

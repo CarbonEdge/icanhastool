@@ -34,12 +34,19 @@ export type ProcessStatus = 'Starting' | 'Running' | 'Stopped' | { Error: string
 
 export type RecordingMode = 'toggle' | 'push-to-talk';
 
+export type ThemeOption =
+  | 'light'
+  | 'dark'
+  | 'system'
+  | 'high-contrast-dark'
+  | 'high-contrast-light';
+
 export interface AppSettings {
   selectedDevice: string | null;
   selectedModel: string | null;
   recordingMode: RecordingMode;
   pushToTalkKey: string;
-  theme: 'light' | 'dark' | 'system';
+  theme: ThemeOption;
   // Accessibility
   fontSize: number; // 0.75 - 2.0 multiplier
   // Workspace

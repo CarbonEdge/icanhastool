@@ -11,6 +11,7 @@
     type AudioDevice,
     type ModelInfo,
     type AppSettings,
+    type ThemeOption,
   } from './stores/app';
 
   export let isOpen = false;
@@ -103,7 +104,7 @@
 
   function handleThemeChange(e: Event) {
     const target = e.target as HTMLSelectElement;
-    currentSettings.theme = target.value as 'light' | 'dark' | 'system';
+    currentSettings.theme = target.value as ThemeOption;
     saveSettings(currentSettings);
     applyTheme(currentSettings.theme);
   }
@@ -113,7 +114,7 @@
     saveSettings(currentSettings);
   }
 
-  function applyTheme(theme: 'light' | 'dark' | 'system') {
+  function applyTheme(theme: ThemeOption) {
     if (typeof window === 'undefined') return;
 
     const root = document.documentElement;
@@ -251,6 +252,8 @@
             <option value="system">System</option>
             <option value="light">Light</option>
             <option value="dark">Dark</option>
+            <option value="high-contrast-dark">High Contrast Dark</option>
+            <option value="high-contrast-light">High Contrast Light</option>
           </select>
         </label>
 
@@ -535,5 +538,51 @@
     --bg-secondary: #f9fafb;
     --bg-hover: #f3f4f6;
     --input-bg: #ffffff;
+  }
+
+  :global([data-theme='high-contrast-dark']) .settings-panel {
+    --bg-color: #000000;
+    --text-color: #ffffff;
+    --text-muted: #e0e0e0;
+    --border-color: #ffffff;
+    --bg-secondary: #1a1a1a;
+    --bg-hover: #2a2a2a;
+    --input-bg: #0a0a0a;
+  }
+
+  :global([data-theme='high-contrast-light']) .settings-panel {
+    --bg-color: #ffffff;
+    --text-color: #000000;
+    --text-muted: #1a1a1a;
+    --border-color: #000000;
+    --bg-secondary: #f5f5f5;
+    --bg-hover: #e0e0e0;
+    --input-bg: #ffffff;
+  }
+
+  /* High contrast focus styles */
+  :global([data-theme='high-contrast-dark']) .settings-panel select:focus,
+  :global([data-theme='high-contrast-dark']) .settings-panel button:focus,
+  :global([data-theme='high-contrast-dark']) .settings-panel input:focus {
+    outline: 3px solid #00ffff;
+    outline-offset: 2px;
+  }
+
+  :global([data-theme='high-contrast-light']) .settings-panel select:focus,
+  :global([data-theme='high-contrast-light']) .settings-panel button:focus,
+  :global([data-theme='high-contrast-light']) .settings-panel input:focus {
+    outline: 3px solid #0000ff;
+    outline-offset: 2px;
+  }
+
+  /* High contrast button borders */
+  :global([data-theme='high-contrast-dark']) .settings-panel button,
+  :global([data-theme='high-contrast-dark']) .settings-panel select {
+    border: 2px solid #ffffff;
+  }
+
+  :global([data-theme='high-contrast-light']) .settings-panel button,
+  :global([data-theme='high-contrast-light']) .settings-panel select {
+    border: 2px solid #000000;
   }
 </style>
