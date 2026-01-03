@@ -15,12 +15,22 @@
 
   // Props
   export let workingDir: string | undefined = undefined;
+  export let fontSize: number = 1.0; // Font size multiplier (0.75 - 2.0)
+
+  // Calculate actual font size from multiplier (base is 14px)
+  $: actualFontSize = Math.round(14 * fontSize);
+
+  // Update terminal font size when it changes
+  $: if (terminal && terminal.options && actualFontSize) {
+    terminal.options.fontSize = actualFontSize;
+    fitAddon?.fit();
+  }
 
   // Initialize terminal
   onMount(async () => {
     terminal = new Terminal({
       cursorBlink: true,
-      fontSize: 14,
+      fontSize: actualFontSize,
       fontFamily: 'Consolas, "Courier New", monospace',
       theme: {
         background: '#1e1e1e',

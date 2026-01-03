@@ -40,6 +40,11 @@ export interface AppSettings {
   recordingMode: RecordingMode;
   pushToTalkKey: string;
   theme: 'light' | 'dark' | 'system';
+  // Accessibility
+  fontSize: number; // 0.75 - 2.0 multiplier
+  // Workspace
+  currentWorkspace: string | null;
+  recentWorkspaces: string[];
 }
 
 // ============================================================================
@@ -72,6 +77,9 @@ export const settings = writable<AppSettings>({
   recordingMode: 'toggle',
   pushToTalkKey: 'Space',
   theme: 'system',
+  fontSize: 1.0,
+  currentWorkspace: null,
+  recentWorkspaces: [],
 });
 
 // ============================================================================
@@ -127,6 +135,29 @@ export function updateTranscription(result: RecognitionResult): void {
 export function clearTranscription(): void {
   currentTranscription.set('');
   partialTranscription.set('');
+}
+
+export function addRecentWorkspace(workspace: string): void {
+  settings.update((current) => {
+    const recents = current.recentWorkspaces.filter((w) => w !== workspace);
+    recents.unshift(workspace);
+    // Keep only last 10 workspaces
+    const newRecents = recents.slice(0, 10);
+    const newSettings = {
+      ...current,
+      currentWorkspace: workspace,
+      recentWorkspaces: newRecents,
+    };
+    // Persist immediately
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(SETTINGS_KEY, JSON.stringify(newSettings));
+      } catch (e) {
+        console.error('Failed to save settings:', e);
+      }
+    }
+    return newSettings;
+  });
 }
 
 // ============================================================================

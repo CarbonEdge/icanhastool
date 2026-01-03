@@ -1,22 +1,60 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { open } from '@tauri-apps/plugin-dialog';
   import Terminal from '$lib/Terminal.svelte';
   import VoiceControl from '$lib/VoiceControl.svelte';
   import Settings from '$lib/Settings.svelte';
   import Waveform from '$lib/Waveform.svelte';
-  import { loadSettings, claudeStatus, isClaudeRunning, isModelLoaded } from '$lib/stores/app';
+  import {
+    loadSettings,
+    claudeStatus,
+    isClaudeRunning,
+    isModelLoaded,
+    settings,
+    addRecentWorkspace,
+    type AppSettings,
+  } from '$lib/stores/app';
 
   let terminal: Terminal;
   let settingsOpen = false;
   let claudeRunning = false;
   let modelLoaded = false;
+  let currentSettings: AppSettings;
+  let showRecentWorkspaces = false;
 
   isClaudeRunning.subscribe((v) => (claudeRunning = v));
   isModelLoaded.subscribe((v) => (modelLoaded = v));
+  settings.subscribe((v) => (currentSettings = v));
 
   onMount(() => {
     loadSettings();
   });
+
+  async function selectWorkspace() {
+    const selected = await open({
+      directory: true,
+      multiple: false,
+      title: 'Select Workspace Directory',
+    });
+
+    if (selected && typeof selected === 'string') {
+      addRecentWorkspace(selected);
+      // Terminal will restart with new working directory
+      // Force a re-render by binding to the key
+    }
+  }
+
+  function selectRecentWorkspace(workspace: string) {
+    addRecentWorkspace(workspace);
+    showRecentWorkspaces = false;
+  }
+
+  function getWorkspaceDisplayName(path: string | null): string {
+    if (!path) return 'No workspace';
+    // Get the last folder name from the path
+    const parts = path.replace(/\\/g, '/').split('/').filter(Boolean);
+    return parts[parts.length - 1] || path;
+  }
 
   function handleTranscription(event: CustomEvent<string>) {
     const text = event.detail;
@@ -33,6 +71,50 @@
 <div class="app">
   <header class="app-header">
     <h1>icanhastool</h1>
+
+    <div class="workspace-section">
+      <div class="workspace-picker">
+        <button class="workspace-button" on:click={selectWorkspace} aria-label="Select workspace folder">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+            <path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z" />
+          </svg>
+          <span class="workspace-name" title={currentSettings?.currentWorkspace || 'No workspace'}>
+            {getWorkspaceDisplayName(currentSettings?.currentWorkspace)}
+          </span>
+        </button>
+
+        {#if currentSettings?.recentWorkspaces?.length > 0}
+          <div class="recent-dropdown">
+            <button
+              class="dropdown-toggle"
+              on:click={() => (showRecentWorkspaces = !showRecentWorkspaces)}
+              aria-label="Show recent workspaces"
+              aria-expanded={showRecentWorkspaces}
+            >
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                <path d="M7 10l5 5 5-5z" />
+              </svg>
+            </button>
+
+            {#if showRecentWorkspaces}
+              <div class="dropdown-menu">
+                <div class="dropdown-header">Recent Workspaces</div>
+                {#each currentSettings.recentWorkspaces as workspace}
+                  <button
+                    class="dropdown-item"
+                    on:click={() => selectRecentWorkspace(workspace)}
+                    title={workspace}
+                  >
+                    {getWorkspaceDisplayName(workspace)}
+                  </button>
+                {/each}
+              </div>
+            {/if}
+          </div>
+        {/if}
+      </div>
+    </div>
+
     <div class="header-status">
       <span class="status-indicator" class:running={claudeRunning}>
         {claudeRunning ? 'Claude Running' : 'Claude Stopped'}
@@ -49,7 +131,13 @@
 
   <main class="app-main">
     <div class="terminal-section">
-      <Terminal bind:this={terminal} />
+      {#key currentSettings?.currentWorkspace}
+        <Terminal
+          bind:this={terminal}
+          workingDir={currentSettings?.currentWorkspace ?? undefined}
+          fontSize={currentSettings?.fontSize ?? 1}
+        />
+      {/key}
     </div>
 
     <aside class="voice-section">
@@ -106,6 +194,114 @@
     font-size: 18px;
     font-weight: 600;
     color: var(--text-primary, #f8fafc);
+  }
+
+  .workspace-section {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+  }
+
+  .workspace-picker {
+    display: flex;
+    align-items: center;
+  }
+
+  .workspace-button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    background-color: var(--bg-tertiary, #334155);
+    border: 1px solid var(--border-color, #334155);
+    border-radius: 6px;
+    color: var(--text-primary, #f8fafc);
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.2s;
+  }
+
+  .workspace-picker:has(.recent-dropdown) .workspace-button {
+    border-radius: 6px 0 0 6px;
+  }
+
+  .workspace-button:hover {
+    background-color: var(--bg-hover, #475569);
+  }
+
+  .workspace-name {
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .recent-dropdown {
+    position: relative;
+  }
+
+  .dropdown-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 8px;
+    background-color: var(--bg-tertiary, #334155);
+    border: 1px solid var(--border-color, #334155);
+    border-left: none;
+    border-radius: 0 6px 6px 0;
+    color: var(--text-muted, #94a3b8);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .dropdown-toggle:hover {
+    background-color: var(--bg-hover, #475569);
+    color: var(--text-primary, #f8fafc);
+  }
+
+  .dropdown-menu {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin-top: 4px;
+    min-width: 250px;
+    max-width: 400px;
+    background-color: var(--bg-secondary, #1e293b);
+    border: 1px solid var(--border-color, #334155);
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    z-index: 100;
+    overflow: hidden;
+  }
+
+  .dropdown-header {
+    padding: 8px 12px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted, #94a3b8);
+    border-bottom: 1px solid var(--border-color, #334155);
+  }
+
+  .dropdown-item {
+    display: block;
+    width: 100%;
+    padding: 10px 12px;
+    text-align: left;
+    background: none;
+    border: none;
+    color: var(--text-primary, #f8fafc);
+    cursor: pointer;
+    font-size: 13px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    transition: background-color 0.15s;
+  }
+
+  .dropdown-item:hover {
+    background-color: var(--bg-tertiary, #334155);
   }
 
   .header-status {

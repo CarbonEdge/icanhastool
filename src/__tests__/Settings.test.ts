@@ -39,6 +39,9 @@ describe('Settings Component', () => {
       recordingMode: 'toggle',
       pushToTalkKey: 'Space',
       theme: 'system',
+      fontSize: 1.0,
+      currentWorkspace: null,
+      recentWorkspaces: [],
     });
   });
 
@@ -112,6 +115,9 @@ describe('Settings interactions', () => {
       recordingMode: 'toggle',
       pushToTalkKey: 'Space',
       theme: 'system',
+      fontSize: 1.0,
+      currentWorkspace: null,
+      recentWorkspaces: [],
     });
   });
 

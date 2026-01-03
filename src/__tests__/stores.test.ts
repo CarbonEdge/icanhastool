@@ -201,6 +201,9 @@ describe('Settings Store', () => {
       recordingMode: 'toggle',
       pushToTalkKey: 'Space',
       theme: 'system',
+      fontSize: 1.0,
+      currentWorkspace: null,
+      recentWorkspaces: [],
     });
     // Clear localStorage mock
     vi.stubGlobal('localStorage', {
@@ -223,6 +226,9 @@ describe('Settings Store', () => {
       recordingMode: 'push-to-talk',
       pushToTalkKey: 'ControlLeft',
       theme: 'dark',
+      fontSize: 1.25,
+      currentWorkspace: '/path/to/workspace',
+      recentWorkspaces: ['/path/to/workspace'],
     };
     settings.set(newSettings);
     expect(get(settings)).toEqual(newSettings);
@@ -235,6 +241,9 @@ describe('Settings Store', () => {
       recordingMode: 'toggle',
       pushToTalkKey: 'Space',
       theme: 'dark',
+      fontSize: 1.0,
+      currentWorkspace: null,
+      recentWorkspaces: [],
     };
     saveSettings(newSettings);
     expect(localStorage.setItem).toHaveBeenCalledWith(

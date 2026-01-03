@@ -108,6 +108,11 @@
     applyTheme(currentSettings.theme);
   }
 
+  function handleFontSizeChange(size: number) {
+    currentSettings.fontSize = size;
+    saveSettings(currentSettings);
+  }
+
   function applyTheme(theme: 'light' | 'dark' | 'system') {
     if (typeof window === 'undefined') return;
 
@@ -247,6 +252,34 @@
             <option value="light">Light</option>
             <option value="dark">Dark</option>
           </select>
+        </label>
+
+        <label>
+          <span>Font Size: {Math.round((currentSettings.fontSize ?? 1) * 100)}%</span>
+          <div class="font-size-control">
+            <button
+              class="font-size-button"
+              on:click={() => handleFontSizeChange(Math.max(0.75, (currentSettings.fontSize ?? 1) - 0.25))}
+              disabled={(currentSettings.fontSize ?? 1) <= 0.75}
+              aria-label="Decrease font size"
+            >A-</button>
+            <input
+              type="range"
+              min="0.75"
+              max="2"
+              step="0.25"
+              value={currentSettings.fontSize ?? 1}
+              on:input={(e) => handleFontSizeChange(parseFloat(e.currentTarget.value))}
+              aria-label="Font size slider"
+            />
+            <button
+              class="font-size-button"
+              on:click={() => handleFontSizeChange(Math.min(2, (currentSettings.fontSize ?? 1) + 0.25))}
+              disabled={(currentSettings.fontSize ?? 1) >= 2}
+              aria-label="Increase font size"
+            >A+</button>
+          </div>
+          <span class="font-size-hint">Terminal: {Math.round(14 * (currentSettings.fontSize ?? 1))}px</span>
         </label>
       </section>
     </div>
@@ -430,6 +463,46 @@
     border-radius: 6px;
     margin-bottom: 16px;
     font-size: 14px;
+  }
+
+  .font-size-control {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .font-size-control input[type='range'] {
+    flex: 1;
+    height: 6px;
+    border-radius: 3px;
+    background: var(--bg-secondary, #f3f4f6);
+    cursor: pointer;
+  }
+
+  .font-size-button {
+    padding: 6px 12px;
+    background-color: var(--bg-secondary, #f3f4f6);
+    border: 1px solid var(--border-color, #e5e7eb);
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    min-width: 40px;
+  }
+
+  .font-size-button:hover:not(:disabled) {
+    background-color: var(--bg-hover, #e5e7eb);
+  }
+
+  .font-size-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .font-size-hint {
+    font-size: 12px;
+    color: var(--text-muted, #6b7280);
+    margin-top: 4px;
   }
 
   @media (prefers-color-scheme: dark) {

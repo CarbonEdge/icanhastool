@@ -22,6 +22,9 @@ describe('VoiceControl Component', () => {
       recordingMode: 'toggle',
       pushToTalkKey: 'Space',
       theme: 'system',
+      fontSize: 1.0,
+      currentWorkspace: null,
+      recentWorkspaces: [],
     });
   });
 
@@ -109,6 +112,9 @@ describe('VoiceControl keyboard events', () => {
       recordingMode: 'push-to-talk',
       pushToTalkKey: 'Space',
       theme: 'system',
+      fontSize: 1.0,
+      currentWorkspace: null,
+      recentWorkspaces: [],
     });
   });
 
